@@ -1,0 +1,12 @@
+cmake-build-debug/
+cmake-build-release/
+.idea/
+build/
+input.txt
+temp.txt
+decoded.txt
+encoded.hfm
+input2.txt
+buff.txt
+100mb.txt
+
