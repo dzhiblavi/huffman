@@ -69,12 +69,8 @@ void encode_file(char const *in_file, char const *out_file) {
     file.close();
 
     std::chrono::duration<double> counter_duration = std::chrono::high_resolution_clock::now() - stp;
-<<<<<<< HEAD
     std::cout << "updating speed = " << 1.0f * count / counter_duration.count() / 1000000.0f << " Mb/sec\n";
-=======
-    std::cout << "updating speed = " << 1.0f * count / counter_duration.count() / 1000000.0f << " Mb / sec\n";
     stp = std::chrono::high_resolution_clock::now();
->>>>>>> b70bbe3845a1d82ac6f6d38c584aa54b7989e347
 
     hfm::tree ht(fc);
 
