@@ -13,13 +13,17 @@
 #include <limits>
 
 namespace test {
-    void TEST_NAME(std::string const& name) { std::cerr << "\033[01;34m=> " << name << "\033[0m\n"; }
+    void TEST_RUN(std::string const& name) { std::cerr << "\033[01;34m[RUN...] \033[0m" << name; }
+    void TEST_RM(std::string const &name) { for (size_t i = 0; i < name.size() + 9; ++i) std::cout << '\b'; std::cout << std::flush; }
     void TEST_NOTE(std::string const& note) { std::cerr << "\033[01;36mN:\033[0m " << note << "\n"; }
     void TEST_WARN(std::string const& mess) { std::cerr << "\033[01;35mW:\033[0m " << mess << "\n"; }
     void TEST_ERR(std::string const& mess) { std::cerr << "\033[01;31mE:\033[0m " << mess << "\n"; }
     void TEST_OK(std::string const& name) { std::cerr << "\033[32m[  OK  ] \033[0m" << name << '\n'; }
     void TEST_FAIL(std::string const& name, std::string const& why) { std::cerr << "\033[31m[ FAIL ] \033[0m" << name  << " : " << why << '\n'; }
     void TEST_OK_FAULT(std::string const& name, std::string const& why) { std::cerr << "\033[32m[  OK  ] \033[0m" << name << " :\033[1;33m error expected \033[0m: " << why << '\n'; }
+    void TEST_RMOK(std::string const& name) { TEST_RM(name); TEST_OK(name); }
+    void TEST_RMOK_FAULT(std::string const& name, std::string const& why) { TEST_RM(name); TEST_OK_FAULT(name, why); }
+    void TEST_RMFAIL(std::string const& name, std::string const& why) { TEST_RM(name); TEST_FAIL(name, why); }
 
     class timer {
     std::chrono::time_point<std::chrono::high_resolution_clock> tp, start;
@@ -93,47 +97,52 @@ measure_time(F&& f, Args&& ...args) {
 
 template<typename F, typename ...Args>
 void run_test(std::string test_name, F&& f, Args&&... args) {
+    TEST_RUN(test_name);
     try {
         execute(std::forward<F>(f), std::forward<Args>(args)...);
-        TEST_OK(test_name);
+        TEST_RMOK(test_name);
     } catch (std::exception const& e) {
-        TEST_FAIL(test_name, e.what());
+        TEST_RMFAIL(test_name, e.what());
     }
 }
 
 template<typename F, typename... Args>
 void run_fault_test(std::string test_name, F&& f, Args&&... args) {
+    TEST_RUN(test_name);
     try {
         execute(std::forward<F>(f), std::forward<Args>(args)...);
-        TEST_FAIL(test_name, "error expected");
+        TEST_RMFAIL(test_name, "error expected");
     } catch (std::exception const& e) {
-        TEST_OK_FAULT(test_name, e.what());
+        TEST_RMOK_FAULT(test_name, e.what());
     }
 }
 
 template<typename Gen, typename... Args>
 void run_multitest(std::string test_name, size_t launch, Gen&& g, Args&& ...args) {
+    TEST_RUN(test_name);
     try {
         while (launch--) {
             g(args...);
         }
-        TEST_OK(test_name);
+        TEST_RMOK(test_name);
     } catch (std::exception const& e) {
-        TEST_FAIL(test_name, e.what());
+        TEST_RMFAIL(test_name, e.what());
     }
 }
 
 template<typename Gen, typename... Args>
 void run_multitest_faulty(std::string test_name, size_t launch, Gen&& g, Args&& ...args) {
+    TEST_RUN(test_name);
     while (launch--) {
         try {
             g(args...);
-            TEST_FAIL(test_name, "error expected");
+            TEST_RMFAIL(test_name, "error expected");
+            return;
         } catch (std::exception const& e) {
             // pass
         }
     }
-    TEST_OK(test_name);
+    TEST_RMOK(test_name);
 }
 } /* namespace test */
 

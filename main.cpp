@@ -38,7 +38,7 @@ std::string gen_string(size_t size) {
 template<typename T>
 std::vector<T> gen_vector(size_t size) {
     std::vector<T> ret(size);
-    std::for_each(ret.begin(), ret.end(), [](T& x) {
+    std::for_each(ret.begin(), ret.end(), [](T &x) {
         x = T(rnd.rand());
     });
     return ret;
@@ -427,16 +427,7 @@ std::string partial_decode(std::string const &code) {
     return encoded;
 }
 
-std::string tobin(std::string const& s) {
-    std::string ret;
-    for (auto c : s) {
-        ret += std::to_string((int)((uint8_t)c));
-        ret += ' ';
-    }
-    return ret;
-}
-
-std::string encode_faulty(std::string const& s, int fault_inject) {
+std::string encode_faulty(std::string const &s, int fault_inject) {
     hfm::fcounter fc;
     fc.update(s.begin(), s.end());
     hfm::tree ht(fc);
@@ -444,14 +435,16 @@ std::string encode_faulty(std::string const& s, int fault_inject) {
     std::string cd = ht.encode(s.begin(), s.end());
     if (fault_inject) {
         size_t pos = rnd.rand() % code.size();
-//        std::cout << "=> " << tobin(code);
         code[pos] += 1;
-//        std::cout << "\n-> " << tobin(code) << '\n';
+        if (rnd.rand() & 1) {
+            code += char(rnd.rand() & UINT8_MAX);
+        }
     } else {
         size_t pos = rnd.rand() % cd.size();
-//        std::cout << "=> " << tobin(cd);
         cd[pos] += 1;
-//        std::cout << "\n-> " << tobin(cd) << '\n';
+        if (rnd.rand() & 1) {
+            cd += char(rnd.rand() & UINT8_MAX);
+        }
     }
     return code + cd;
 }
@@ -464,12 +457,12 @@ void megahard_full_tree_test() {
 }
 
 struct Deleter {
-    void operator()(char* p) {
+    void operator()(char *p) {
         operator delete(p);
     }
 };
 
-void encode_file_faulty(char const *in_file, char const *out_file, int fault_inject) {
+void encode_file_faulty(char const *in_file, char const *out_file, int fault_inject, bool verbose = true) {
     std::ifstream file;
     file.open(in_file);
     if (!file) {
@@ -478,14 +471,13 @@ void encode_file_faulty(char const *in_file, char const *out_file, int fault_inj
 
     hfm::fcounter fc;
 
-    auto buff = static_cast<char*>(operator new(BUFF_SIZE));
+    auto buff = static_cast<char *>(operator new(BUFF_SIZE));
     std::unique_ptr<char, Deleter> uniq(buff);
 
     size_t count = 0;
     auto stp = std::chrono::high_resolution_clock::now();
 
     while (!file.eof()) {
-//        memset(buff, 0, BUFF_SIZE);
         file.read(buff, BUFF_SIZE);
         fc.update(buff, buff + file.gcount());
         count += file.gcount();
@@ -508,17 +500,22 @@ void encode_file_faulty(char const *in_file, char const *out_file, int fault_inj
     if (fault_inject == 1) {
         code[rnd.rand() % code.size()] = rnd.rand() & UINT8_MAX;
     }
+    if (fault_inject && (rnd.rand() & 1)) {
+        code += char(rnd.rand() & UINT8_MAX);
+    }
     ofs.write(code.data(), code.size());
     code.clear();
 
     while (!file.eof()) {
-//        memset(buff, 0, BUFF_SIZE);
         file.read(buff, BUFF_SIZE);
 
         code = ht.encode(buff, buff + file.gcount());
 
         if (fault_inject == 2) {
             code[rnd.rand() % code.size()] = rnd.rand() & UINT8_MAX;
+        }
+        if (fault_inject && (rnd.rand() & 1)) {
+            code += char(rnd.rand() & UINT8_MAX);
         }
 
         ofs.write(code.data(), code.size());
@@ -527,15 +524,16 @@ void encode_file_faulty(char const *in_file, char const *out_file, int fault_inj
         ht.clear();
     }
 
-    std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - stp;
-    std::cout << "encoding speed : " << (size_t) (1.0f * count / dur.count()) / 1000000.0f << " Mb/sec\n";
-//    std::cout << "symbols encoded : " << count << '\n' << "time elapsed : " << dur.count() << '\n';
+    if (verbose) {
+        std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - stp;
+        std::cout << "encoding speed : " << (size_t) (1.0f * count / dur.count()) / 1000000.0f << " Mb/sec\n";
+    }
 
     file.close();
     ofs.close();
 }
 
-void decode_file(char const *in_file, char const *out_file) {
+void decode_file(char const *in_file, char const *out_file, bool verbose = true) {
     std::ifstream file;
     file.open(in_file);
     if (!file) {
@@ -552,7 +550,6 @@ void decode_file(char const *in_file, char const *out_file) {
     auto stp = std::chrono::high_resolution_clock::now();
 
     while (!file.eof()) {
-//        memset(buff, 0, DECODE_BUFF_SIZE);
         file.read(buff, DECODE_BUFF_SIZE);
         auto p = ht.initialize_tree(buff, buff + file.gcount());
         count += file.gcount();
@@ -565,7 +562,6 @@ void decode_file(char const *in_file, char const *out_file) {
         }
     }
     while (!file.eof()) {
-//        memset(buff, 0, DECODE_BUFF_SIZE);
         file.read(buff, DECODE_BUFF_SIZE);
         ht.prepare(buff, buff + file.gcount());
         ht.decode(buff, buff + ht.chars_left());
@@ -578,9 +574,10 @@ void decode_file(char const *in_file, char const *out_file) {
         throw std::runtime_error("read failed");
     }
 
-    std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - stp;
-    std::cout << "decoding speed : " << (size_t) (1.0f * count / dur.count()) / 1000000.0f << " Mb/sec\n";
-//    std::cout << "symbols decoded : " << count << '\n' << "time elapsed : " << dur.count() << '\n';
+    if (verbose) {
+        std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - stp;
+        std::cout << "decoding speed : " << (size_t) (1.0f * count / dur.count()) / 1000000.0f << " Mb/sec\n";
+    }
 
     file.close();
     ofs.close();
@@ -619,9 +616,7 @@ void complex_data_faulty_test(bool fault) {
     hfm::tree enc(fc);
     std::string code = enc.encode() + enc.encode(data.begin(), data.end());
     if (fault) {
-//        std::cout << "=> " << tobin(code) << "\n   ";
         ++code[rnd.rand() % code.size()];
-//        std::cout << tobin(code) << '\n';
     }
     hfm::tree decoder;
     auto st = decoder.initialize_tree(code.begin(), code.end());
@@ -634,19 +629,16 @@ void complex_data_faulty_test(bool fault) {
         throw std::runtime_error("read failed");
     }
 
-//    std::cout << decoder.gcount() << '\n';
-
-//    std::cout << "=> " << data.size() << ' ' << en - encoded.begin() << '\n';
-//    for (size_t i = 0; i < data.size(); ++i) {
-//        std::cout << data[i] << ' ' << encoded[i] << '\n';
-//    }
-//    std::cout << "\n\n";
-
     test::check_equal(true, std::equal(encoded.begin(), en, data.begin()));
 }
 
+void file_check_test_fault(char const* in_file) {
+    int fault = (rnd.rand() & 1) + 1;
+    encode_file_faulty(in_file, "out.temp", fault, false);
+    decode_file("out.temp", "check.txt", false); // must throw
+}
+
 int main(int argc, char *argv[]) {
-//    prepare_table();
     test::run_test("simple bitset test", simple_bitset_test);
     test::run_test("set bitset test", set_bitset_test);
     test::run_test("complex bitset test", complex_bitset_test);
@@ -675,14 +667,11 @@ int main(int argc, char *argv[]) {
     test::run_multitest("e/d complex data", 100, complex_data_faulty_test, false);
     test::run_multitest_faulty("e/d complex data faulty", 100, complex_data_faulty_test, true);
 
-    test::run_test("encode large file without faults", encode_file_faulty, "../100mb.txt", "../encoded.hfm", 0);
-    test::run_test("decode large file without faults", decode_file, "../encoded.hfm", "../decoded.txt");
+    test::run_test("encode large file without faults", encode_file_faulty, "../100mb.txt", "../encoded.hfm", 0, false);
+    test::run_test("decode large file without faults", decode_file, "../encoded.hfm", "../decoded.txt", false);
     test::check_equal(true, compare_files("../100mb.txt", "../decoded.txt"));
 
-    test::run_test("encode with tree header faults", encode_file_faulty, "../100mb.txt", "../encoded.hfm", 1);
-    test::run_fault_test("decode with faults (corrupted header file)", decode_file, "../encoded.hfm", "../decoded.txt");
-    test::run_test("encode with block faults", encode_file_faulty, "../100mb.txt", "../encoded.hfm", 2);
-    test::run_fault_test("decode with block faults (corrupted block)", decode_file, "../encoded.hfm", "../decoded.txt");
+    test::run_multitest_faulty("e/d large file with faults", 5, file_check_test_fault, "../100mb.txt");
     return 0;
 }
 
