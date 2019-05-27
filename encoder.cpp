@@ -88,19 +88,15 @@ void tree::calc_code_(node_ptr p, bitset& current_code_bitset,
     }
 }
 
-bool tree::block_header_initialized_() const {
-    return current_block_inited == HEADER_SIZE;
-}
-
-bool tree::tree_header_initialized_() const {
-    return tree_header_inited == HEADER_SIZE;
+bool tree::header_initialized_() const {
+    return header_cnt == HEADER_SIZE;
 }
 
 tree::node_ptr tree::decode_(node_ptr v, uint8_t x, uint8_t left) {
     if (v->id != -1) {
         decoded_.push_back(char_by_id_[v->id]);
         v = root;
-        if (!--current_block_left) {
+        if (!--count) {
             return v;
         }
     }
@@ -148,8 +144,8 @@ tree::tree(fcounter const& fcc) {
     tree_code_.append(tree_alphabet_bitset.begin(), tree_alphabet_bitset.end());
 
     write_binary_((uint32_t) (tree_code_.size() - HEADER_SIZE), tree_code_.begin() + HASH_SIZE_BYTES);
-    uint32_t hash = crc32(tree_code_.begin(), tree_code_.end());
-    write_binary_(hash, tree_code_.begin());
+    uint32_t hashh = crc32(tree_code_.begin(), tree_code_.end());
+    write_binary_(hashh, tree_code_.begin());
 }
 
 tree::~tree() {
@@ -157,13 +153,12 @@ tree::~tree() {
 }
 
 bool tree::read_finished_success() const {
-    return (tree_hash_unchecked == current_tree_hash)
-        && ((block_hash_unchecked ^ CRCMASK) == current_block_hash)
-        && !current_block_left;
+    return ((hash ^ CRCMASK) == expected_hash)
+        && !count;
 }
 
 void tree::check_block_hash() const {
-    if ((block_hash_unchecked ^ CRCMASK) != current_block_hash) {
+    if ((hash ^ CRCMASK) != expected_hash) {
         throw std::runtime_error("corrupted file : incorrect block hash sum");
     }
 }
@@ -175,10 +170,7 @@ size_t tree::gcount() const {
 void tree::free_tree() {
     terminate_(root);
     cur_restore = root = nullptr;
-    current_block_left = 0;
-    current_block_hash = 0;
-    current_tree_hash = 0;
-    current_block_inited = 0;
+    count = header_cnt = hash = expected_hash = 0;
     alphabet_restore_left = -1;
     decoded_.clear();
     tree_code_.clear();

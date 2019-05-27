@@ -61,25 +61,23 @@ class tree {
 
     node_ptr root = nullptr, cur_restore = nullptr;
     vector<uint8_t> decoded_;
-    uint32_t current_block_left = 0;
-    uint32_t current_block_hash = 0;
-    uint32_t current_tree_hash = 0;
-    uint32_t current_block_inited = 0;
-    uint32_t tree_header_inited = 0;
-    uint32_t tree_header_size = 0;
+
     uint32_t alphabet_restore_left = -1;
     uint32_t alph_id = 0;
     uint32_t vertex_id = 0;
-    uint32_t block_hash_unchecked = 0;
     uint32_t last_read = 0;
-    uint32_t tree_hash_unchecked = 0;
+
+    uint32_t header_cnt = 0;
+    uint32_t hash = 0;
+    uint32_t count = 0;
+    uint32_t expected_hash = 0;
 
     static bool less_(node_ptr a, node_ptr b, node_ptr c, node_ptr d);
     void build_tree_(fcounter const& fc);
-    void calc_code_(node_ptr p, bitset& current_code_bitset, bitset& tree_alphabet_bitset, bitset& tree_code_bitset, size_t& cnt);
+    void calc_code_(node_ptr p, bitset& current_code_bitset,
+            bitset& tree_alphabet_bitset, bitset& tree_code_bitset, size_t& cnt);
 
-    bool block_header_initialized_() const;
-    bool tree_header_initialized_() const;
+    bool header_initialized_() const;
     void check_block_hash() const;
 
     node_ptr decode_(node_ptr v, uint8_t x, uint8_t left);
@@ -87,22 +85,19 @@ class tree {
     static void terminate_(node_ptr p);
 
     template<typename InputIt>
-    InputIt parse_block_header_(InputIt first, InputIt last) {
-        if (current_block_inited == 0) {
-            current_block_hash = 0;
+    InputIt parse_header_(InputIt first, InputIt last) {
+        if (!header_cnt) {
+            expected_hash = 0;
         }
-        for (; current_block_inited < HASH_SIZE_BYTES && first != last; ++current_block_inited) {
-            current_block_hash += (uint64_t)*(uint8_t const*)(&(*first++)) << (8 * current_block_inited);
+        for (; header_cnt < HASH_SIZE_BYTES && first != last; ++header_cnt) {
+            expected_hash += (uint64_t)convert_to_byte(first++) << (8 * header_cnt);
         }
-        if (current_block_inited == HASH_SIZE_BYTES) {
-            block_hash_unchecked = CRCMASK;
+        if (header_cnt == HASH_SIZE_BYTES) {
+            hash = CRCMASK;
         }
-        for (; !block_header_initialized_() && first != last; ++current_block_inited) {
-            block_hash_unchecked = crc32_hash(block_hash_unchecked, convert_to_byte(first));
-            current_block_left += convert_to_byte(first++) << (8 * (current_block_inited - HASH_SIZE_BYTES));
-        }
-        if (block_header_initialized_()) {
-            cur_restore = root;
+        for (; !header_initialized_() && first != last; ++header_cnt) {
+            hash = crc32_hash(hash, convert_to_byte(first));
+            count += convert_to_byte(first++) << (8 * (header_cnt - HASH_SIZE_BYTES));
         }
         return first;
     }
@@ -169,20 +164,15 @@ public:
         using value_type = typename std::iterator_traits<InputIt>::value_type;
         static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
 
-        if ((tree_header_initialized_() && !tree_header_size) || first == last) {
+        if ((header_initialized_() && !header_cnt) || first == last) {
             return first;
         }
 
-        if (!tree_header_initialized_()) {
-            for (; tree_header_inited < HASH_SIZE_BYTES && first != last; ++tree_header_inited) {
-                current_tree_hash += convert_to_byte(first++) << (8 * tree_header_inited);
-            }
-            for (; tree_header_inited < HEADER_SIZE && first != last; ++tree_header_inited) {
-                tree_header_size += convert_to_byte(first++) << (8 * (tree_header_inited - HASH_SIZE_BYTES));
-            }
-            if (tree_header_inited == HEADER_SIZE) {
+        if (!header_initialized_()) {
+            first = parse_header_(first, last);
+            if (header_initialized_()) {
                 tree_code_ = std::string(HEADER_SIZE, '\0');
-                write_binary_(tree_header_size, tree_code_.begin() + HASH_SIZE_BYTES);
+                write_binary_(count, tree_code_.begin() + HASH_SIZE_BYTES);
                 alph_id = vertex_id = 0;
                 terminate_(root);
                 root = new node {0, nullptr, nullptr};
@@ -195,20 +185,21 @@ public:
             return first;
         }
 
-        while (first != last && tree_header_size) {
-            --tree_header_size;
+        while (first != last && count) {
+            --count;
             tree_code_ += convert_to_byte(first++);
         }
 
-        if (!tree_header_size) {
-            tree_hash_unchecked = crc32(tree_code_.begin(), tree_code_.end());
-            write_binary_(current_tree_hash, tree_code_.begin());
-            if (tree_hash_unchecked != current_tree_hash || !tree_code_.size()) {
+        if (!count) {
+            hash = crc32(tree_code_.begin(), tree_code_.end());
+            write_binary_(hash, tree_code_.begin());
+            if (hash != expected_hash || !tree_code_.size()) {
                 throw std::runtime_error("corrupted file : incorrect tree hash sum");
             }
 
             auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
             restore_alphabet(st, tree_code_.end());
+            count = header_cnt = hash = expected_hash = 0;
         }
 
         return first;
@@ -239,17 +230,19 @@ public:
         static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
 
         while (first != last) {
-            if (block_header_initialized_()) {
-                if (!current_block_left) {
-                    current_block_inited = 0;
+            if (header_initialized_()) {
+                if (!count) {
+                    header_cnt = 0;
                     check_block_hash();
-                    first = parse_block_header_(first, last);
+                    first = parse_header_(first, last);
+                    cur_restore = root;
                 } else {
-                    block_hash_unchecked = crc32_hash(block_hash_unchecked, convert_to_byte(first));
+                    hash = crc32_hash(hash, convert_to_byte(first));
                     cur_restore = decode_(cur_restore, convert_to_byte(first++), 8);
                 }
             } else {
-                first = parse_block_header_(first, last);
+                first = parse_header_(first, last);
+                cur_restore = root;
             }
         }
     }

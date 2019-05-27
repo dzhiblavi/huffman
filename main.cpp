@@ -280,6 +280,10 @@ void complex_rtree_test() {
         std::string encoded(ht.chars_left(), 'q');
         ht.decode(encoded.begin(), encoded.end());
 
+        if (!ht.read_finished_success()) {
+            throw std::runtime_error("read failed");
+        }
+
 //        std::cout << s << '\n' << encoded << '\n';
         test::check_equal(s, encoded);
     }
