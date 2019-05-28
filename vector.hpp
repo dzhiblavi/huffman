@@ -51,8 +51,10 @@ private:
     }
 
     void destroy_() {
-        std::destroy(data_, data_ + size_);
-        if (data_ != small_) {
+        if (small()) {
+            std::destroy(data_, data_ + INIT_SO_SIZE_);
+        } else {
+            std::destroy(data_, data_ + capacity_);
             alloc_.deallocate(data_, capacity_);
         }
     }
