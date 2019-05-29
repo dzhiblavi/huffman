@@ -31,7 +31,7 @@ public:
     fcounter();
 
     template<typename InputIt>
-    void update(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
+    void update(InputIt first, InputIt last) {
         std::vector<size_t> frc(256);
         parallel_count(first, last, frc);
         std::transform(freq_, freq_ + 256, frc.begin(), freq_, [](smb a, size_t b){ a.cnt += b; return a;});
@@ -177,7 +177,7 @@ public:
     }
 
     template <typename InputIt>
-    InputIt initialize_tree(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
+    InputIt initialize_tree(InputIt first, std::enable_if_t<carries_byte_data_v<InputIt>, InputIt> last) {
         if ((header_initialized_() && !header_cnt) || first == last) {
             return first;
         }
@@ -215,7 +215,7 @@ public:
     }
 
     template <typename InputIt>
-    void prepare(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
+    void prepare(InputIt first, std::enable_if_t<carries_byte_data_v<InputIt>, InputIt> last) {
         while (first != last) {
             if (header_initialized_()) {
                 if (!count) {
@@ -252,9 +252,9 @@ public:
         return first;
     }
 };
-} /* namespace hfm */
+} // namespace hfm
 
-#endif /* HUFFMAN_ENCODER_H_ */
+#endif // HUFFMAN_ENCODER_H_
 
 
 

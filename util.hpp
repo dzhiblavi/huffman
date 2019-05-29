@@ -121,6 +121,14 @@ struct carries_trivially_copyable {
 template <typename Iterator>
 constexpr bool carries_trivially_copyable_v = carries_trivially_copyable<Iterator>::value;
 
+template <typename Iterator>
+struct carries_byte_data {
+    static const bool value = (sizeof(typename std::iterator_traits<Iterator>::value_type) == 1);
+};
+
+template <typename Iterator>
+constexpr bool carries_byte_data_v = carries_byte_data<Iterator>::value;
+
 template <typename Iterator, typename F, typename URet, typename U, typename... Args>
 void parallel_calc(F&& f, U&& u, Iterator first, Iterator last, URet& ret, Args&&... args) {
     typedef typename std::iterator_traits<Iterator>::iterator_category category;
@@ -128,7 +136,7 @@ void parallel_calc(F&& f, U&& u, Iterator first, Iterator last, URet& ret, Args&
 }
 
 template <typename InputIt>
-void count_impl(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last, std::vector<size_t>& store) {
+void count_impl(InputIt first, InputIt last, std::vector<size_t>& store) {
     typedef typename std::iterator_traits<InputIt>::value_type value_type;
 
     while (first != last) {
