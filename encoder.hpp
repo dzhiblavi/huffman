@@ -84,7 +84,7 @@ class tree {
     void trace_(node_ptr p, size_t d = 0) const;
     static void terminate_(node_ptr p);
 
-    template<typename InputIt>
+    template <typename InputIt>
     InputIt parse_header_(InputIt first, InputIt last) {
         if (!header_cnt) {
             expected_hash = 0;
@@ -102,7 +102,7 @@ class tree {
         return first;
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     InputIt restore_tree_(InputIt first, InputIt last) {
         for (; first != last; ++first) {
             for (size_t i = 0; i < 8; ++i) {
@@ -130,7 +130,7 @@ class tree {
         return first;
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     InputIt restore_alphabet(InputIt first, InputIt last) {
         while (first != last && alphabet_restore_left--) {
             char_by_id_[alph_id++] = convert_to_byte(first++);
@@ -159,7 +159,7 @@ public:
     std::string const& encode() const;
     bitset const& encode(char c) const;
 
-    template<typename InputIt>
+    template <typename InputIt>
     InputIt initialize_tree(InputIt first, InputIt last) {
         using value_type = typename std::iterator_traits<InputIt>::value_type;
         static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
@@ -205,26 +205,26 @@ public:
         return first;
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     std::string encode(any_block, InputIt first, InputIt last) {
         std::string ret;
         parallel_encode(first, last, ret, alph_map_);
         return ret;
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     std::string encode(single_block, InputIt first, InputIt last) {
         std::string ret;
         encode_impl(first, last, ret, alph_map_);
         return ret;
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     std::string encode(InputIt first, InputIt last) {
         return encode(any_block(), first, last);
     }
 
-    template<typename InputIt>
+    template <typename InputIt>
     void prepare(InputIt first, InputIt last) {
         using value_type = typename std::iterator_traits<InputIt>::value_type;
         static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
@@ -247,7 +247,7 @@ public:
         }
     }
 
-    template<typename OutputIt>
+    template <typename OutputIt>
     OutputIt decode(OutputIt first, OutputIt last) {
         using value_type = typename std::iterator_traits<OutputIt>::value_type;
         static_assert(std::is_trivially_copyable_v<value_type>);
