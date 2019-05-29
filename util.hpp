@@ -34,7 +34,7 @@ uint8_t convert_to_byte(It p) {
 template <typename T>
 void write_binary_(T value, std::string::iterator data) {
         std::copy((uint8_t *) &value, (uint8_t *) &value + sizeof(T), data);
-    }
+}
 
 namespace {
 template <size_t t>
@@ -71,30 +71,30 @@ void parallel_calc_impl(F&& f, U&&, InputIt first, InputIt last, URet& ret, std:
 
 template <typename ForwardIt, typename F, typename URet, typename U, typename... Args>
 void parallel_calc_impl(F&& f, U&& u, ForwardIt first, ForwardIt last, URet& ret, std::forward_iterator_tag, Args&&... args) {
-        typename std::iterator_traits<ForwardIt>::difference_type dist = std::distance(first, last);
+    typename std::iterator_traits<ForwardIt>::difference_type dist = std::distance(first, last);
 
-        if (dist < MTHREAD_LAUNCH_MINIMAL) {
-            f(first, last, ret, std::forward<Args>(args)...);
-            return;
-        }
-
-        std::vector<URet> s(THREAD_CNT, ret);
-        std::vector<std::thread> t;
-
-        for (size_t i = 0; i < THREAD_CNT - 1; ++i) {
-            auto next = std::next(first, dist >> THREAD_EXP);
-            t.emplace_back(std::thread(f, first, next, std::ref(s[i]), std::ref(args)...));
-            first = next;
-        }
-        t.emplace_back(std::thread(f, first, last, std::ref(s.back()), std::ref(args)...));
-
-        t.front().join();
-        ret = std::move(s[0]);
-        for (size_t i = 1; i < t.size(); ++i) {
-            t[i].join();
-            u(ret, s[i]);
-        }
+    if (dist < MTHREAD_LAUNCH_MINIMAL) {
+        f(first, last, ret, std::forward<Args>(args)...);
+        return;
     }
+
+    std::vector<URet> s(THREAD_CNT, ret);
+    std::vector<std::thread> t;
+
+    for (size_t i = 0; i < THREAD_CNT - 1; ++i) {
+        auto next = std::next(first, dist >> THREAD_EXP);
+        t.emplace_back(std::thread(f, first, next, std::ref(s[i]), std::ref(args)...));
+        first = next;
+    }
+    t.emplace_back(std::thread(f, first, last, std::ref(s.back()), std::ref(args)...));
+
+    t.front().join();
+    ret = std::move(s[0]);
+    for (size_t i = 1; i < t.size(); ++i) {
+        t[i].join();
+        u(ret, s[i]);
+    }
+}
 } // namespace
 
 using CRC32_TABLE = crc32_table<255, 0>;
