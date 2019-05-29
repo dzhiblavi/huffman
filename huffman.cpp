@@ -1,6 +1,6 @@
-/*
-    author dzhiblavi
- */
+//
+//  author dzhiblavi
+//
 
 #include <string>
 #include <iostream>
@@ -9,36 +9,39 @@
 #include <any>
 #include <fstream>
 
-#include "testing.hpp"
-
 #include "encoder.hpp"
 #include "bitset.hpp"
 
 #define BUFF_SIZE 128000
 #define BIG_BUFF_SIZE 4096000
 
-bool verbose = false;
-
-std::string st = "\033[01;34m[RUN...] \033[0m[";
-std::string curr_status;
+static bool verbose = false;
+char const ok_status[] = "\033[32m[  OK  ] \033[0m";
+char const fail_status[] = "\033[31m[ FAIL ] \033[0m";
+static char status[51] = "\033[01;34m[RUN...] \033[0m[                    ] 00.00%";
+const size_t status_size = 51;
+const size_t start_ind = 22, end_ind = 42;
+const size_t perc_pos = 44;
 
 void status_remove() {
-    for (size_t i = 0; i < curr_status.size(); ++i) {
+    for (size_t i = 0; i < status_size; ++i) {
         std::cout << '\b';
     }
     std::cout << std::flush;
-    curr_status = "";
 }
 
-void status(float perc) {
-    auto parts = (size_t)(20.0f * perc);
+void show_status(float perc) {
+    auto parts = (size_t) (20.0f * perc);
     status_remove();
-    curr_status = st;
-    for (size_t i = 0; i < 20; ++i) {
-        curr_status += (i <= parts ? "=" : " ");
+    for (size_t i = start_ind; i < end_ind; ++i) {
+        status[i] = (i - start_ind <= parts ? '=' : ' ');
     }
-    curr_status += "], " + std::to_string(100 * perc).substr(0, 5) + "%";
-    std::cout << curr_status << std::flush;
+    perc *= 100;
+    std::string num = std::to_string(perc);
+    for (size_t i = 0; i <= 3 + (perc >= 10.f); ++i) {
+        status[i + perc_pos + 1 - (perc >= 10.f)] = num[i];
+    }
+    std::cout << status << std::flush;
 }
 
 struct Deleter {
@@ -94,13 +97,9 @@ void encode_file(char const *in_file, char const *out_file) {
     while (!file.eof()) {
         file.read(buff, BIG_BUFF_SIZE);
         ncount += file.gcount();
-
         code = ht.encode(buff, buff + file.gcount());
-
         ofs.write(code.data(), code.size());
-
-        status(1.0f * ncount / count);
-
+        show_status(1.0f * ncount / count);
         code.clear();
         ht.clear();
     }
@@ -115,25 +114,26 @@ void encode_file(char const *in_file, char const *out_file) {
     file.close();
     ofs.close();
 
-    st = "\033[32m[  OK  ] \033[0m[";
-    status(1.0f);
-    std::cout << std::endl;
+    show_status(1.0f);
 }
 
 void decode_file(char const *in_file, char const *out_file) {
     std::ifstream file;
+    std::ofstream ofs;
+
     file.open(in_file);
-    file.seekg (0, file.end);
-    size_t length = file.tellg();
-    file.seekg (0, file.beg);
     if (!file) {
         throw std::runtime_error("failed to open input file");
     }
-    std::ofstream ofs;
-    ofs.open(out_file);
     if (!ofs) {
         throw std::runtime_error("failed to open output file");
     }
+
+    file.seekg (0, file.end);
+    size_t length = file.tellg();
+    file.seekg (0, file.beg);
+    ofs.open(out_file);
+
     char buff[std::max(BUFF_SIZE << 3, 1000)];
     hfm::tree ht;
     size_t count = 0;
@@ -143,7 +143,7 @@ void decode_file(char const *in_file, char const *out_file) {
         file.read(buff, BUFF_SIZE);
         auto p = ht.initialize_tree(buff, buff + file.gcount());
         count += file.gcount();
-        status(1.0f * count / length);
+        show_status(1.0f * count / length);
         if (p != buff + file.gcount()) {
             ht.prepare(p, buff + file.gcount());
             ht.decode(buff, buff + ht.chars_left());
@@ -157,7 +157,7 @@ void decode_file(char const *in_file, char const *out_file) {
         ht.prepare(buff, buff + file.gcount());
         ht.decode(buff, buff + ht.chars_left());
         ofs.write(buff, ht.chars_left());
-        status(1.0f * count / length);
+        show_status(1.0f * count / length);
         ht.clear();
         count += file.gcount();
     }
@@ -175,9 +175,7 @@ void decode_file(char const *in_file, char const *out_file) {
     file.close();
     ofs.close();
 
-    st = "\033[32m[  OK  ] \033[0m[";
-    status(1.0f);
-    std::cout << std::endl;
+    show_status(1.0f);
 }
 
 int main(int argc, char *argv[]) {
@@ -201,16 +199,18 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     std::string input_file(argv[i]);
-    std::string output_file(i + 1 < argc ? argv[i + 1] : "out.txt");
+    std::string output_file(i + 1 < argc ? argv[i + 1] : (compress ? "out.hfm" : "out.txt"));
     try {
         if (compress) {
             encode_file(input_file.c_str(), output_file.c_str());
         } else {
             decode_file(input_file.c_str(), output_file.c_str());
         }
+        status_remove();
+        std::cout << ok_status << '\n';
     } catch (std::exception const& e) {
         status_remove();
-        std::cerr << "\033[31m[ FAIL ] \033[0m : " << e.what() << '\n';
+        std::cout << fail_status << " : " << e.what() << '\n';
     }
     return 0;
 }

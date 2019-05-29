@@ -1,7 +1,6 @@
-/*
-    author dzhiblavi
-    version : 1.0.2
- */
+//
+//  author dzhiblavi
+//
 
 #ifndef TESTING_HPP_H_
 #define TESTING_HPP_H_
@@ -139,7 +138,7 @@ void run_multitest_faulty(std::string test_name, size_t launch, Gen&& g, Args&& 
             TEST_RMFAIL(test_name, "error expected");
             return;
         } catch (std::exception const& e) {
-            // pass
+            // ok, exception expected
         }
     }
     TEST_RMOK(test_name);

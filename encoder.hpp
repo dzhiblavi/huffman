@@ -1,6 +1,6 @@
-/*
-    author dzhiblavi
- */
+//
+//  author dzhiblavi
+//
 
 #ifndef HUFFMAN_ENCODER_H_
 #define HUFFMAN_ENCODER_H_
@@ -31,10 +31,7 @@ public:
     fcounter();
 
     template<typename InputIt>
-    void update(InputIt first, InputIt last) {
-        using value_type = typename std::iterator_traits<InputIt>::value_type;
-        static_assert(std::is_trivially_copyable_v<value_type>);
-
+    void update(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
         std::vector<size_t> frc(256);
         parallel_count(first, last, frc);
         std::transform(freq_, freq_ + 256, frc.begin(), freq_, [](smb a, size_t b){ a.cnt += b; return a;});
@@ -59,8 +56,9 @@ class tree {
     char char_by_id_[ALPH_SIZE];
     std::string tree_code_;
 
-    node_ptr root = nullptr, cur_restore = nullptr;
-    vector<uint8_t> decoded_;
+    node_ptr root = nullptr;
+    node_ptr cur_restore = nullptr;
+    std::vector<uint8_t> decoded_;
 
     uint32_t alphabet_restore_left = -1;
     uint32_t alph_id = 0;
@@ -160,52 +158,6 @@ public:
     bitset const& encode(char c) const;
 
     template <typename InputIt>
-    InputIt initialize_tree(InputIt first, InputIt last) {
-        using value_type = typename std::iterator_traits<InputIt>::value_type;
-        static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
-
-        if ((header_initialized_() && !header_cnt) || first == last) {
-            return first;
-        }
-
-        if (!header_initialized_()) {
-            first = parse_header_(first, last);
-            if (header_initialized_()) {
-                tree_code_ = std::string(HEADER_SIZE, '\0');
-                write_binary_(count, tree_code_.begin() + HASH_SIZE_BYTES);
-                alph_id = vertex_id = 0;
-                terminate_(root);
-                root = new node {0, nullptr, nullptr};
-                cur_restore = root;
-                alphabet_restore_left = 0;
-            }
-        }
-
-        if (first == last) {
-            return first;
-        }
-
-        while (first != last && count) {
-            --count;
-            tree_code_ += convert_to_byte(first++);
-        }
-
-        if (!count) {
-            hash = crc32(tree_code_.begin(), tree_code_.end());
-            write_binary_(hash, tree_code_.begin());
-            if (hash != expected_hash || !tree_code_.size()) {
-                throw std::runtime_error("corrupted file : incorrect tree hash sum");
-            }
-
-            auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
-            restore_alphabet(st, tree_code_.end());
-            count = header_cnt = hash = expected_hash = 0;
-        }
-
-        return first;
-    }
-
-    template <typename InputIt>
     std::string encode(any_block, InputIt first, InputIt last) {
         std::string ret;
         parallel_encode(first, last, ret, alph_map_);
@@ -225,10 +177,45 @@ public:
     }
 
     template <typename InputIt>
-    void prepare(InputIt first, InputIt last) {
-        using value_type = typename std::iterator_traits<InputIt>::value_type;
-        static_assert(std::is_trivially_copyable_v<value_type> && sizeof(value_type) == 1);
+    InputIt initialize_tree(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
+        if ((header_initialized_() && !header_cnt) || first == last) {
+            return first;
+        }
+        if (!header_initialized_()) {
+            first = parse_header_(first, last);
+            if (header_initialized_()) {
+                tree_code_ = std::string(HEADER_SIZE, '\0');
+                write_binary_(count, tree_code_.begin() + HASH_SIZE_BYTES);
+                alph_id = vertex_id = 0;
+                terminate_(root);
+                root = new node {0, nullptr, nullptr};
+                cur_restore = root;
+                alphabet_restore_left = 0;
+            }
+        }
+        if (first == last) {
+            return first;
+        }
+        while (first != last && count) {
+            --count;
+            tree_code_ += convert_to_byte(first++);
+        }
+        if (!count) {
+            hash = crc32(tree_code_.begin(), tree_code_.end());
+            write_binary_(hash, tree_code_.begin());
+            if (hash != expected_hash || !tree_code_.size()) {
+                throw std::runtime_error("corrupted file : incorrect tree hash sum");
+            }
 
+            auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
+            restore_alphabet(st, tree_code_.end());
+            count = header_cnt = hash = expected_hash = 0;
+        }
+        return first;
+    }
+
+    template <typename InputIt>
+    void prepare(InputIt first, std::enable_if_t<carries_trivially_copyable_v<InputIt>, InputIt> last) {
         while (first != last) {
             if (header_initialized_()) {
                 if (!count) {
@@ -248,13 +235,12 @@ public:
     }
 
     template <typename OutputIt>
-    OutputIt decode(OutputIt first, OutputIt last) {
+    OutputIt decode(OutputIt first, std::enable_if_t<carries_trivially_copyable_v<OutputIt>, OutputIt> last) {
         using value_type = typename std::iterator_traits<OutputIt>::value_type;
-        static_assert(std::is_trivially_copyable_v<value_type>);
 
         last_read = 0;
-        auto i = decoded_.begin();
         size_t ind = 0;
+        auto i = decoded_.begin();
         while (first != last && i != decoded_.end()
             && ind + sizeof(value_type) <= decoded_.size()) {
             ++last_read;

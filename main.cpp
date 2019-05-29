@@ -1,6 +1,6 @@
-/*
-    author dzhiblavi
- */
+//
+//  author dzhiblavi
+//
 
 #include <string>
 #include <iostream>

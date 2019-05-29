@@ -1,6 +1,6 @@
-/*
-    author dzhiblavi
- */
+//
+//  author dzhiblavi
+//
 
 #include "encoder.hpp"
 
@@ -40,7 +40,7 @@ void tree::build_tree_(fcounter const& fc) {
         root = new node {};
         return;
     }
-    vector<node_ptr, 6> q1(size), q2(size);
+    std::vector<node_ptr> q1(size), q2(size);
     for (size_t j = 0; j < size; ++j) {
         q1[j] = new node {(i + j)->cnt, nullptr, nullptr, (i + j)->symb};
     }
@@ -153,8 +153,7 @@ tree::~tree() {
 }
 
 bool tree::read_finished_success() const {
-    return ((hash ^ CRCMASK) == expected_hash)
-        && !count;
+    return ((hash ^ CRCMASK) == expected_hash) && !count;
 }
 
 void tree::check_block_hash() const {

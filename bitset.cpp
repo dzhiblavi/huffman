@@ -1,8 +1,6 @@
-/*
-    author dzhiblavi
- */
-
-#include <iostream>
+//
+//  author dzhiblavi
+//
 
 #include "bitset.hpp"
 
@@ -10,20 +8,9 @@
 #define BITMAX 7
 #define BITLOG 3
 
-std::string bits(uint64_t x) {
-    std::string ret;
-    size_t n = BASE;
-    while (n--) {
-        ret = char('0' + (x & 1)) + ret;
-        x >>= 1;
-    }
-    return ret;
-}
-
 bitset::bitset(size_t size)
-: lc_last(size & BITMAX) {
-    data_.resize(lc_last ? (size >> BITLOG) + 1 : (size >> BITLOG));
-}
+: data_((size & BITMAX) ? (size >> BITLOG) + 1 : (size >> BITLOG)),
+  lc_last(size & BITMAX) {}
 
 bitset::bitset(uint8_t const* data, size_t size)
 : data_(size) {
@@ -97,12 +84,9 @@ void bitset::pop() {
     if (lc_last == 1) {
         lc_last = 0;
         data_.pop_back();
-    } else if (lc_last) {
-        set(size() - 1, 0);
-        --lc_last;
     } else {
         set(size() - 1, 0);
-        lc_last = BITMAX;
+        lc_last = (lc_last + 7) & BITMAX;
     }
 }
 

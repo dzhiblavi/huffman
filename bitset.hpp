@@ -1,18 +1,16 @@
-/*
-    author dzhiblavi
- */
+//
+//  author dzhiblavi
+//
 
 #ifndef HUFFMAN_BITSET_H_
 #define HUFFMAN_BITSET_H_
 
-#include "vector.hpp"
+#include <vector>
+#include <algorithm>
+#include <iostream>
 
-/*
- * dynamic bit sequence container
- * small object optimize
- * */
 class bitset {
-    vector<uint8_t> data_;
+    std::vector<uint8_t> data_;
     int lc_last = 0;
 
 public:
