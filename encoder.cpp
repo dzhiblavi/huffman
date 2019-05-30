@@ -156,7 +156,7 @@ bool tree::read_finished_success() const {
     return ((hash ^ CRCMASK) == expected_hash) && !count;
 }
 
-void tree::check_block_hash() const {
+void tree::check_block_hash_() const {
     if ((hash ^ CRCMASK) != expected_hash) {
         throw std::runtime_error("corrupted file : incorrect block hash sum");
     }

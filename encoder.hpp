@@ -76,7 +76,7 @@ class tree {
             bitset& tree_alphabet_bitset, bitset& tree_code_bitset, size_t& cnt);
 
     bool header_initialized_() const;
-    void check_block_hash() const;
+    void check_block_hash_() const;
 
     node_ptr decode_(node_ptr v, uint8_t x, uint8_t left);
     void trace_(node_ptr p, size_t d = 0) const;
@@ -129,7 +129,7 @@ class tree {
     }
 
     template <typename InputIt>
-    InputIt restore_alphabet(InputIt first, InputIt last) {
+    InputIt restore_alphabet_(InputIt first, InputIt last) {
         while (first != last && alphabet_restore_left--) {
             char_by_id_[alph_id++] = convert_to_byte(first++);
         }
@@ -208,7 +208,7 @@ public:
             }
 
             auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
-            restore_alphabet(st, tree_code_.end());
+            restore_alphabet_(st, tree_code_.end());
             count = header_cnt = hash = expected_hash = 0;
         }
         return first;
@@ -220,7 +220,7 @@ public:
             if (header_initialized_()) {
                 if (!count) {
                     header_cnt = 0;
-                    check_block_hash();
+                    check_block_hash_();
                     first = parse_header_(first, last);
                     cur_restore = root;
                 } else {
@@ -236,12 +236,12 @@ public:
 
     template <typename OutputIt>
     OutputIt decode(OutputIt first, std::enable_if_t<carries_trivially_copyable_v<OutputIt>, OutputIt> last) {
-        using value_type = typename std::iterator_traits<OutputIt>::value_type;
+        typedef typename std::iterator_traits<OutputIt>::value_type value_type;
 
         last_read = 0;
         size_t ind = 0;
         auto i = decoded_.begin();
-        while (first != last && i != decoded_.end()
+        while (first != last
             && ind + sizeof(value_type) <= decoded_.size()) {
             ++last_read;
             std::copy(i, i + sizeof(value_type), reinterpret_cast<uint8_t *>(&(*first)));
