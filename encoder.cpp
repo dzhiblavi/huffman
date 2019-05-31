@@ -82,7 +82,7 @@ void tree::calc_code_(node_ptr p, bitset& current_code_bitset,
         tree_code_bitset.push(1);
         current_code_bitset.push(0);
         calc_code_(p->l, current_code_bitset, tree_alphabet_bitset, tree_code_bitset, cnt);
-        current_code_bitset.set(current_code_bitset.size() - 1, 1);
+        current_code_bitset.flip(current_code_bitset.size() - 1);
         calc_code_(p->r, current_code_bitset, tree_alphabet_bitset, tree_code_bitset, cnt);
         current_code_bitset.pop();
     }

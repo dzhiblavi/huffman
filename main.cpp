@@ -22,7 +22,9 @@ test::rndgen rnd(1, 10000);
 bitset gen_bitset(size_t size) {
     bitset ret(size);
     for (size_t i = 0; i < size; ++i) {
-        ret.set(i, rnd.rand() & 1);
+        if (rnd.rand() & 1) {
+            ret.set(i);
+        }
     }
     return ret;
 }
@@ -48,18 +50,18 @@ void simple_bitset_test() {
     bitset b1(10), b2(13);
     test::check_equal(b1.to_string(), "0000000000");
     test::check_equal(b2.to_string(), "0000000000000");
-    b1.set(2, 1);
-    b1.set(4, 1);
-    b1.set(5, 1);
-    b1.set(8, 1);
-    b2.set(0, 1);
-    b2.set(1, 1);
-    b2.set(2, 1);
-    b2.set(4, 1);
-    b2.set(7, 1);
-    b2.set(8, 1);
-    b2.set(10, 1);
-    b2.set(12, 1);
+    b1.set(2);
+    b1.set(4);
+    b1.set(5);
+    b1.set(8);
+    b2.set(0);
+    b2.set(1);
+    b2.set(2);
+    b2.set(4);
+    b2.set(7);
+    b2.set(8);
+    b2.set(10);
+    b2.set(12);
     test::check_equal(b1.to_string(), "0010110010");
     test::check_equal(b2.to_string(), "1110100110101");
     b1.append(b2);
@@ -86,7 +88,11 @@ void set_bitset_test() {
         size_t pos = rnd.rand() % 1000;
         uint8_t bit = rnd.rand() & 1;
         s[pos] = char('0' + bit);
-        bs.set(pos, bit);
+        if (bit) {
+            bs.set(pos);
+        } else {
+            bs.reset(pos);
+        }
         test::check_equal(bs.to_string(), s);
     }
 }

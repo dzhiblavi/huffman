@@ -85,23 +85,27 @@ void bitset::pop() {
         lc_last = 0;
         data_.pop_back();
     } else {
-        set(size() - 1, 0);
+        reset(size() - 1);
         lc_last = (lc_last + 7) & BITMAX;
     }
 }
 
-uint8_t bitset::get(size_t i) const {
+uint8_t bitset::operator[](size_t i) const {
     return (data_[i >> BITLOG] & (1ull << (BITMAX - (i & BITMAX)))) != 0;
 }
 
-void bitset::set(size_t i, uint8_t bit) {
-    if (bit) {
-        data_[i >> BITLOG] |= (1ull << (BITMAX - (i & BITMAX)));
-    } else {
-        if (get(i)) {
-            data_[i >> BITLOG] ^= (1ull << (BITMAX - (i & BITMAX)));
-        }
+void bitset::set(size_t i) {
+    data_[i >> BITLOG] |= (1ull << (BITMAX - (i & BITMAX)));
+}
+
+void bitset::reset(size_t i) {
+    if ((*this)[i]) {
+        data_[i >> BITLOG] ^= (1ull << (BITMAX - (i & BITMAX)));
     }
+}
+
+void bitset::flip(size_t i) {
+    data_[i >> BITLOG] ^= (1ull << (BITMAX - (i & BITMAX)));
 }
 
 uint8_t* bitset::data() {
@@ -119,7 +123,7 @@ uint8_t* bitset::end() {
 std::string bitset::to_string() const {
     std::string ret;
     for (size_t i = 0; i < size(); ++i) {
-        ret += char('0' + get(i));
+        ret += char('0' + (*this)[i]);
     }
     return ret;
 }

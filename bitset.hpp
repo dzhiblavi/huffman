@@ -34,8 +34,10 @@ public:
     void pop();
     void reserve(size_t);
 
-    uint8_t get(size_t) const;
-    void set(size_t, uint8_t);
+    uint8_t operator[](size_t) const;
+    void set(size_t);
+    void reset(size_t);
+    void flip(size_t);
 
     uint8_t* data();
     uint8_t* begin();
