@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
+#include <cstring>
 
 #include "testing.hpp"
 
@@ -684,41 +685,3 @@ int main(int argc, char *argv[]) {
     test::run_multitest_faulty("e/d large file with faults", 5, file_check_test_fault, "../100mb.txt");
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
