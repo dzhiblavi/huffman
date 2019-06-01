@@ -141,19 +141,6 @@ void decode_file(char const *in_file, char const *out_file) {
 
     while (!file.eof()) {
         file.read(buff, BUFF_SIZE);
-        auto p = ht.initialize_tree(buff, buff + file.gcount());
-        count += file.gcount();
-        show_status(1.0f * count / length);
-        if (p != buff + file.gcount()) {
-            ht.prepare(p, buff + file.gcount());
-            ht.decode(buff, buff + ht.chars_left());
-            ofs.write(buff, ht.chars_left());
-            ht.clear();
-            break;
-        }
-    }
-    while (!file.eof()) {
-        file.read(buff, BUFF_SIZE);
         ht.prepare(buff, buff + file.gcount());
         ht.decode(buff, buff + ht.chars_left());
         ofs.write(buff, ht.chars_left());

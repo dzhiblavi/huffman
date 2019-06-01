@@ -186,4 +186,4 @@ void parallel_encode(Iterator first, Iterator last, std::string& ret, bitset* bs
             first, last, ret, bs);
 }
 
-#endif /* HUFFMAN_UTIL_HPP */
+#endif // HUFFMAN_UTIL_HPP

@@ -60,7 +60,7 @@ class tree {
     node_ptr cur_restore = nullptr;
     std::vector<uint8_t> decoded_;
 
-    uint32_t alphabet_restore_left = -1;
+    uint32_t alphabet_restore_left = 0;
     uint32_t alph_id = 0;
     uint32_t vertex_id = 0;
     uint32_t last_read = 0;
@@ -69,6 +69,7 @@ class tree {
     uint32_t hash = 0;
     uint32_t count = 0;
     uint32_t expected_hash = 0;
+    bool tree_ok = false;
 
     static bool less_(node_ptr a, node_ptr b, node_ptr c, node_ptr d);
     void build_tree_(fcounter const& fc);
@@ -136,6 +137,45 @@ class tree {
         return first;
     }
 
+    template <typename InputIt>
+    InputIt initialize_tree_(InputIt first, InputIt last) {
+        if (tree_ok || (header_initialized_() && !header_cnt) || first == last) {
+            return first;
+        }
+        if (!header_initialized_()) {
+            first = parse_header_(first, last);
+            if (header_initialized_()) {
+                tree_code_ = std::string(HEADER_SIZE, '\0');
+                write_binary_(count, tree_code_.begin() + HASH_SIZE_BYTES);
+                alph_id = vertex_id = 0;
+                terminate_(root);
+                root = new node {0, nullptr, nullptr};
+                cur_restore = root;
+                alphabet_restore_left = 0;
+            }
+        }
+        if (first == last) {
+            return first;
+        }
+        while (first != last && count) {
+            --count;
+            tree_code_ += convert_to_byte(first++);
+        }
+        if (!count) {
+            hash = crc32(tree_code_.begin(), tree_code_.end());
+            write_binary_(hash, tree_code_.begin());
+            if (hash != expected_hash || !tree_code_.size()) {
+                throw std::runtime_error("corrupted file : incorrect tree hash sum");
+            }
+
+            auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
+            restore_alphabet_(st, tree_code_.end());
+            count = header_cnt = hash = expected_hash = 0;
+            tree_ok = true;
+        }
+        return first;
+    }
+
 public:
     struct encoding_policy {};
     struct single_block : encoding_policy {};
@@ -177,45 +217,8 @@ public:
     }
 
     template <typename InputIt>
-    InputIt initialize_tree(InputIt first, std::enable_if_t<carries_byte_data_v<InputIt>, InputIt> last) {
-        if ((header_initialized_() && !header_cnt) || first == last) {
-            return first;
-        }
-        if (!header_initialized_()) {
-            first = parse_header_(first, last);
-            if (header_initialized_()) {
-                tree_code_ = std::string(HEADER_SIZE, '\0');
-                write_binary_(count, tree_code_.begin() + HASH_SIZE_BYTES);
-                alph_id = vertex_id = 0;
-                terminate_(root);
-                root = new node {0, nullptr, nullptr};
-                cur_restore = root;
-                alphabet_restore_left = 0;
-            }
-        }
-        if (first == last) {
-            return first;
-        }
-        while (first != last && count) {
-            --count;
-            tree_code_ += convert_to_byte(first++);
-        }
-        if (!count) {
-            hash = crc32(tree_code_.begin(), tree_code_.end());
-            write_binary_(hash, tree_code_.begin());
-            if (hash != expected_hash || !tree_code_.size()) {
-                throw std::runtime_error("corrupted file : incorrect tree hash sum");
-            }
-
-            auto st = restore_tree_(tree_code_.begin() + HEADER_SIZE, tree_code_.end());
-            restore_alphabet_(st, tree_code_.end());
-            count = header_cnt = hash = expected_hash = 0;
-        }
-        return first;
-    }
-
-    template <typename InputIt>
     void prepare(InputIt first, std::enable_if_t<carries_byte_data_v<InputIt>, InputIt> last) {
+        first = initialize_tree_(first, last);
         while (first != last) {
             if (header_initialized_()) {
                 if (!count) {

@@ -143,6 +143,6 @@ void run_multitest_faulty(std::string test_name, size_t launch, Gen&& g, Args&& 
     }
     TEST_RMOK(test_name);
 }
-} /* namespace test */
+} // namespace test
 
-#endif /* TESTING_HPP_H_ */
+#endif // TESTING_HPP_H_

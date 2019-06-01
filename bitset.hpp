@@ -46,4 +46,4 @@ public:
     std::string to_string() const;
 };
 
-#endif /* HUFFMAN_BITSET_H_ */
+#endif // HUFFMAN_BITSET_H_

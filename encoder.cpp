@@ -146,6 +146,7 @@ tree::tree(fcounter const& fcc) {
     write_binary_((uint32_t) (tree_code_.size() - HEADER_SIZE), tree_code_.begin() + HASH_SIZE_BYTES);
     uint32_t hashh = crc32(tree_code_.begin(), tree_code_.end());
     write_binary_(hashh, tree_code_.begin());
+    tree_ok = true;
 }
 
 tree::~tree() {
@@ -194,4 +195,4 @@ size_t tree::chars_left() const {
 void tree::trace() const {
     trace_(root);
 }
-} /* namespace hfm */
+} // namespace hfm

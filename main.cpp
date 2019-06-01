@@ -302,9 +302,8 @@ void tree_restore_test(std::string &&s) {
     hfm::tree ht(fc);
     std::string code = ht.encode() + ht.encode(s.begin(), s.end());
     hfm::tree reht;
-    auto st = reht.initialize_tree(code.begin(), code.end());
 //    reht.trace();
-    reht.prepare(st, code.end());
+    reht.prepare(code.begin(), code.end());
     std::string encoded(reht.chars_left(), 'q');
     reht.decode(encoded.begin(), encoded.end());
 
@@ -373,7 +372,7 @@ void megahard_discrete_decode_tree_test() {
         std::string code = ht.encode() + ht.encode(s.begin(), s.end()), encoded;
 
         hfm::tree decoder;
-        auto st = decoder.initialize_tree(code.begin(), code.end());
+        auto st = code.begin();
 
         char buff[std::max(10000, DECODE_BUFF_SIZE << 3)];
 
@@ -415,7 +414,8 @@ std::string partial_load(std::string const &s) {
 std::string partial_decode(std::string const &code) {
     hfm::tree decoder;
     std::string encoded;
-    auto st = decoder.initialize_tree(code.begin(), code.end());
+//    auto st = decoder.initialize_tree(code.begin(), code.end());
+    auto st = code.begin();
 
     char buff[std::max(1000, DECODE_BUFF_SIZE << 4)];
 
@@ -562,18 +562,6 @@ void decode_file(char const *in_file, char const *out_file, bool verbose = true)
 
     while (!file.eof()) {
         file.read(buff, DECODE_BUFF_SIZE);
-        auto p = ht.initialize_tree(buff, buff + file.gcount());
-        count += file.gcount();
-        if (p != buff + file.gcount()) {
-            ht.prepare(p, buff + file.gcount());
-            ht.decode(buff, buff + ht.chars_left());
-            ofs.write(buff, ht.chars_left());
-            ht.clear();
-            break;
-        }
-    }
-    while (!file.eof()) {
-        file.read(buff, DECODE_BUFF_SIZE);
         ht.prepare(buff, buff + file.gcount());
         ht.decode(buff, buff + ht.chars_left());
         ofs.write(buff, ht.chars_left());
@@ -630,7 +618,8 @@ void complex_data_faulty_test(bool fault) {
         ++code[rnd.rand() % code.size()];
     }
     hfm::tree decoder;
-    auto st = decoder.initialize_tree(code.begin(), code.end());
+//    auto st = decoder.initialize_tree(code.begin(), code.end());
+    auto st = code.begin();
     std::vector<uint64_t> encoded(data.size() << 1);
 
     decoder.prepare(st, code.end());
