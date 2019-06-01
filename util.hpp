@@ -36,7 +36,6 @@ void write_binary_(T value, std::string::iterator data) {
         std::copy((uint8_t *) &value, (uint8_t *) &value + sizeof(T), data);
 }
 
-namespace {
 template <size_t t>
 constexpr uint32_t poly_hash = t & 1 ? (t >> 1) ^ 0xEDB88320UL : t >> 1;
 
@@ -95,7 +94,6 @@ void parallel_calc_impl(F&& f, U&& u, ForwardIt first, ForwardIt last, URet& ret
         u(ret, s[i]);
     }
 }
-} // namespace
 
 using CRC32_TABLE = crc32_table<255, 0>;
 
