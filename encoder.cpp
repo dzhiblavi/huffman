@@ -167,15 +167,6 @@ size_t tree::gcount() const {
     return last_read;
 }
 
-void tree::free_tree() {
-    terminate_(root);
-    cur_restore = root = nullptr;
-    count = header_cnt = hash = expected_hash = 0;
-    alphabet_restore_left = -1;
-    decoded_.clear();
-    tree_code_.clear();
-}
-
 std::string const& tree::encode() const {
     return tree_code_;
 }

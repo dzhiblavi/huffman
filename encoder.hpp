@@ -187,7 +187,6 @@ public:
     tree(tree const&) = delete;
     ~tree();
 
-    void free_tree();
     void clear();
     size_t chars_left() const;
     void trace() const;
